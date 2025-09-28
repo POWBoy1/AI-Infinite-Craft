@@ -6,74 +6,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" type="image/png" href="favicon.ico">
 <style>
-  body {
-    margin: 0;
-    font-family: 'Arial', sans-serif;
-    background: #1c1c1c;
-    color: #fff;
-    display: flex;
-    height: 100vh;
-  }
-  #game {
-    flex: 3;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    padding: 20px;
-    background: #222;
-  }
-  h2 {
-    margin-bottom: 15px;
-    text-align: center;
-    font-size: 28px;
-    text-shadow: 1px 1px #000;
-  }
-  #items {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    justify-content: center;
-    margin-bottom: 20px;
-  }
-  .item {
-    background: #333;
-    color: #fff;
-    padding: 12px 18px;
-    border-radius: 8px;
-    cursor: pointer;
-    user-select: none;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-    transition: transform 0.1s, box-shadow 0.2s;
-  }
-  .item:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.6); }
-  .item.selected { background: #ff9800; box-shadow: 0 0 15px #ff9800; }
-  #buttons {
-    margin-bottom: 15px;
-  }
-  #combineBtn, #clearBtn {
-    background: #4caf50;
-    border: none;
-    padding: 10px 22px;
-    margin: 0 8px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 16px;
-    transition: transform 0.1s, background 0.2s;
-  }
-  #combineBtn:hover, #clearBtn:hover { transform: translateY(-2px); }
-  #clearBtn { background: #e53935; }
-  #status { font-size: 14px; margin-top: 8px; color: #ccc; text-align:center; }
-  #log {
-    flex: 1;
-    background: #2a2a2a;
-    padding: 12px;
-    overflow-y: auto;
-    border-left: 2px solid #444;
-  }
-  #log h2 { font-size: 22px; text-align:center; margin-top:0; }
-  #log ul { list-style: none; padding-left:0; }
-  #log li { padding: 6px 10px; border-radius: 4px; margin-bottom: 4px; background: #3a3a3a; }
+  body { margin:0; font-family:'Arial',sans-serif; background:#1c1c1c; color:#fff; display:flex; height:100vh; }
+  #game { flex:3; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; padding:20px; background:#222; }
+  h2 { margin-bottom:15px; text-align:center; font-size:28px; text-shadow:1px 1px #000; }
+  #items { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin-bottom:20px; }
+  .item { background:#333; color:#fff; padding:12px 18px; border-radius:8px; cursor:pointer; user-select:none; box-shadow:0 2px 6px rgba(0,0,0,0.4); transition: transform 0.1s, box-shadow 0.2s; }
+  .item:hover { transform:translateY(-2px); box-shadow:0 4px 12px rgba(0,0,0,0.6); }
+  .item.selected { background:#ff9800; box-shadow:0 0 15px #ff9800; }
+  #buttons { margin-bottom:15px; }
+  #combineBtn,#clearBtn { background:#4caf50; border:none; padding:10px 22px; margin:0 8px; border-radius:6px; cursor:pointer; font-size:16px; transition: transform 0.1s, background 0.2s; }
+  #combineBtn:hover,#clearBtn:hover { transform:translateY(-2px); }
+  #clearBtn { background:#e53935; }
+  #status { font-size:14px; margin-top:8px; color:#ccc; text-align:center; }
+  #log { flex:1; background:#2a2a2a; padding:12px; overflow-y:auto; border-left:2px solid #444; }
+  #log h2 { font-size:22px; text-align:center; margin-top:0; }
+  #log ul { list-style:none; padding-left:0; }
+  #log li { padding:6px 10px; border-radius:4px; margin-bottom:4px; background:#3a3a3a; }
 </style>
 </head>
 <body>
@@ -81,10 +29,10 @@
     <h2>AI Infinite Craft</h2>
     <div id="items"></div>
     <div id="buttons">
-      <button id="combineBtn">Combine Selected</button>
+      <button id="combineBtn" disabled>Combine Selected</button>
       <button id="clearBtn">Clear Save</button>
     </div>
-    <div id="status">Select at least 2 items, then click Combine.</div>
+    <div id="status">Loading API key...</div>
   </div>
   <div id="log">
     <h2>Discovered Items</h2>
@@ -93,11 +41,20 @@
 
 <script>
 let OPENAI_API_KEY = "";
+const combineBtn = document.getElementById("combineBtn");
 
-fetch("key.json")
-  .then(res => res.json())
-  .then(data => OPENAI_API_KEY = data.OPENAI_API_KEY)
-  .catch(() => alert("Failed to load API key from key.json."));
+async function loadAPIKey() {
+  try {
+    const res = await fetch("key.json");
+    const data = await res.json();
+    OPENAI_API_KEY = data.OPENAI_API_KEY;
+    combineBtn.disabled = false;
+    updateStatus();
+  } catch {
+    alert("Failed to load API key from key.json.");
+    document.getElementById("status").textContent = "Failed to load API key.";
+  }
+}
 
 let discovered = JSON.parse(localStorage.getItem("discovered")) || ["Water","Fire","Earth","Air"];
 let selected = [];
@@ -109,7 +66,7 @@ function renderItems() {
     const el = document.createElement("div");
     el.textContent = item;
     el.className = "item";
-    if (selected.includes(item)) el.classList.add("selected");
+    if(selected.includes(item)) el.classList.add("selected");
     el.onclick = () => toggleSelect(item, el);
     container.appendChild(el);
   });
@@ -127,8 +84,8 @@ function renderDiscovered() {
 }
 
 function toggleSelect(item, el) {
-  if (selected.includes(item)) {
-    selected = selected.filter(i => i !== item);
+  if(selected.includes(item)){
+    selected = selected.filter(i => i!==item);
     el.classList.remove("selected");
   } else {
     selected.push(item);
@@ -137,17 +94,18 @@ function toggleSelect(item, el) {
   updateStatus();
 }
 
-function updateStatus(msg) {
+function updateStatus(msg){
   const s = document.getElementById("status");
   if(msg){ s.textContent = msg; return; }
-  s.textContent = selected.length === 0 
+  if(!OPENAI_API_KEY) s.textContent = "Loading API key...";
+  else s.textContent = selected.length === 0 
     ? "Select at least 2 items, then click Combine."
     : `${selected.length} selected: ${selected.join(" + ")}`;
 }
 
 async function combineSelected() {
-  if(selected.length < 2){ alert("Select at least 2 items to combine."); return; }
-  if(!OPENAI_API_KEY){ alert("API key not loaded. Check key.json."); return; }
+  if(selected.length<2){ alert("Select at least 2 items."); return; }
+  if(!OPENAI_API_KEY){ alert("API key not loaded."); return; }
   updateStatus("Combining...");
   const result = await fetchAIResult(selected);
   if(result && !discovered.includes(result)){
@@ -159,7 +117,7 @@ async function combineSelected() {
   } else {
     showToast("Nothing happened...");
   }
-  selected = [];
+  selected=[];
   renderItems();
   updateStatus();
 }
@@ -171,9 +129,9 @@ Return a single new creative item that could result from combining them.
 Be imaginative, fun, and game-like.
 Output only the new item name.`;
 
-  try{
+  try {
     const resp = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
+      method:"POST",
       headers:{
         "Content-Type":"application/json",
         "Authorization":"Bearer "+OPENAI_API_KEY
@@ -217,14 +175,18 @@ function showToast(msg){
   toast.style.boxShadow="0 2px 6px rgba(0,0,0,0.3)";
   toast.style.zIndex="1000";
   document.body.appendChild(toast);
-  setTimeout(()=>{ toast.style.transition="opacity 0.5s"; toast.style.opacity="0"; setTimeout(()=>toast.remove(),500); },2000);
+  setTimeout(()=>{
+    toast.style.transition="opacity 0.5s";
+    toast.style.opacity="0";
+    setTimeout(()=>toast.remove(),500);
+  },2000);
 }
 
-document.getElementById("combineBtn").onclick=combineSelected;
+combineBtn.onclick=combineSelected;
 document.getElementById("clearBtn").onclick=clearSave;
 
 renderItems();
-updateStatus();
+loadAPIKey();
 </script>
 </body>
 </html>
