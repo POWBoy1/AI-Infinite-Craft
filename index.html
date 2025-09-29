@@ -48,10 +48,11 @@ async function loadAPIKey() {
     const res = await fetch("key.json");
     const data = await res.json();
     OPENAI_API_KEY = data.OPENAI_API_KEY;
+    if(!OPENAI_API_KEY) throw new Error("No key found");
     combineBtn.disabled = false;
     updateStatus();
-  } catch {
-    alert("Failed to load API key from key.json.");
+  } catch (e) {
+    alert("Failed to load API key from key.json. Serve via local server!");
     document.getElementById("status").textContent = "Failed to load API key.";
   }
 }
@@ -104,7 +105,7 @@ function updateStatus(msg){
 }
 
 async function combineSelected() {
-  if(selected.length<2){ alert("Select at least 2 items."); return; }
+  if(selected.length < 2){ alert("Select at least 2 items."); return; }
   if(!OPENAI_API_KEY){ alert("API key not loaded."); return; }
   updateStatus("Combining...");
   const result = await fetchAIResult(selected);
@@ -117,7 +118,7 @@ async function combineSelected() {
   } else {
     showToast("Nothing happened...");
   }
-  selected=[];
+  selected = [];
   renderItems();
   updateStatus();
 }
@@ -125,29 +126,32 @@ async function combineSelected() {
 async function fetchAIResult(items){
   const prompt = `You are the Infinite Craft AI.
 Given these items: ${items.join(", ")}
-Return a single item that could result from combining them.
+Return a single new item that could result from combining them.
 Output only the new item name.`;
-
+  
   try {
     const resp = await fetch("https://api.openai.com/v1/responses", {
       method:"POST",
       headers:{
         "Content-Type":"application/json",
-        "Authorization":"Bearer "+OPENAI_API_KEY
+        "Authorization":"Bearer " + OPENAI_API_KEY
       },
       body: JSON.stringify({
         model:"gpt-4o-mini",
-        messages:[{role:"user", content:prompt}],
-        max_tokens:20,
-        temperature:0.9
+        input: prompt,
+        temperature:0.9,
+        max_output_tokens:20
       })
     });
     if(!resp.ok) return null;
     const data = await resp.json();
-    const text = data?.choices?.[0]?.message?.content?.trim();
+    const text = data?.output_text?.trim();
     if(!text) return null;
     return text.split("\n")[0].trim().replace(/^"|"$/g,"");
-  } catch { return null; }
+  } catch(e){ 
+    console.error(e);
+    return null; 
+  }
 }
 
 function clearSave(){
@@ -181,8 +185,8 @@ function showToast(msg){
   },2000);
 }
 
-combineBtn.onclick=combineSelected;
-document.getElementById("clearBtn").onclick=clearSave;
+combineBtn.onclick = combineSelected;
+document.getElementById("clearBtn").onclick = clearSave;
 
 renderItems();
 loadAPIKey();
