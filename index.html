@@ -125,12 +125,11 @@ async function combineSelected() {
 async function fetchAIResult(items){
   const prompt = `You are the Infinite Craft AI.
 Given these items: ${items.join(", ")}
-Return a single new creative item that could result from combining them.
-Be imaginative, fun, and game-like.
+Return a single item that could result from combining them.
 Output only the new item name.`;
 
   try {
-    const resp = await fetch("https://api.openai.com/v1/chat/completions", {
+    const resp = await fetch("https://api.openai.com/v1/responses", {
       method:"POST",
       headers:{
         "Content-Type":"application/json",
